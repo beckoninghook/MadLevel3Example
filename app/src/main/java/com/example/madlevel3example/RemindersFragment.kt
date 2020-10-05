@@ -13,6 +13,10 @@ import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.android.synthetic.main.fragment_reminders.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 
 /**
@@ -45,10 +49,14 @@ class RemindersFragment : Fragment() {
     }
 
     private fun getRemindersFromDatabase() {
-        val reminders = reminderRepository.getAllReminders()
-        this@RemindersFragment.reminders.clear()
-        this@RemindersFragment.reminders.addAll(reminders)
-        reminderAdapter.notifyDataSetChanged()
+        CoroutineScope(Dispatchers.Main).launch {
+            val reminders = withContext(Dispatchers.IO) {
+                reminderRepository.getAllReminders()
+            }
+            this@RemindersFragment.reminders.clear()
+            this@RemindersFragment.reminders.addAll(reminders)
+            reminderAdapter.notifyDataSetChanged()
+        }
     }
 
 
@@ -69,8 +77,13 @@ class RemindersFragment : Fragment() {
             bundle.getString(BUNDLE_REMINDER_KEY)?.let {
                 val reminder = Reminder(it)
 
-                reminderRepository.insertReminder(reminder)
-                getRemindersFromDatabase()
+                CoroutineScope(Dispatchers.Main).launch {
+                    withContext(Dispatchers.IO) {
+                        reminderRepository.insertReminder(reminder)
+                    }
+                    getRemindersFromDatabase()
+                }
+                
             } ?: Log.e("ReminderFragment", "Request triggered, but empty reminder text!")
 
         }
@@ -101,8 +114,13 @@ class RemindersFragment : Fragment() {
             override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
                 val position = viewHolder.adapterPosition
                 val reminderToDelete = reminders[position]
-                reminderRepository.deleteReminder(reminderToDelete)
-                getRemindersFromDatabase()
+
+                CoroutineScope(Dispatchers.Main).launch {
+                    withContext(Dispatchers.IO) {
+                        reminderRepository.deleteReminder(reminderToDelete)
+                    }
+                    getRemindersFromDatabase()
+                }
 
             }
         }
